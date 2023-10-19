@@ -1,1 +1,2 @@
 My name is Eric Parker. My research interests revolve around understanding how critical zone structure influences solute dynamics in rivers/streams.
+Alicia here! Saying hi from R class. We are ein the same lab and both study biogeochemistry in stream systems!
