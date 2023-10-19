@@ -1,0 +1,1 @@
+My name is Eric Parker. My research interests revolve around understanding how critical zone structure influences solute dynamics in rivers/streams.
