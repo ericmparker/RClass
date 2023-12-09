@@ -1,0 +1,1199 @@
+---
+title: "BIOL 806 Final Project"
+author: "Eric Parker"
+date: "2023-12-08"
+output: pdf_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE, warning=FALSE}
+# Set working directory
+setwd("C:/Users/epark/Documents/UNH/Current_R_Projects/Solutes")
+
+# Load relevant libraries
+library(dplyr)
+library(ggplot2)
+library(cowplot)
+library(ggtern)
+library(ggpubr)
+library(ggpmisc)
+library (plotly)
+library(lubridate)
+library(tidyr)
+library(tidyverse)
+library(dataRetrieval)
+library(purrr)
+library(broom)
+```
+
+# Seasonal Exploration of Solute Concentration Discharge Relationships Reveal Critical Zone Controls on a Suburbanizing Stream Ecosystem
+
+## Data Science for Life Sciences, Fall 2023
+
+# Abstract
+
+The structure of the Critical Zone (CZ) has a significant impact on solute export to the river network, this is especially true as anthropogenic land-use / land-cover (LULC) continues to expand, with implications for stream ecosystem function and water quality. Concentration-discharge (CQ) analyses have been widely used to understand the controls on nutrient export regimes including carbon (C), nitrogen (N), and phosphorus (P). While specific conductance is frequently incorporated into such CZ analyses, the relationships between individual cations and their impact on key nutrients are less well understood in the context of anthropogenically modified CZ landscapes. We leveraged long-term weekly and high-frequency data from the Lamprey River Hydrological Observatory (LRHO), a temperate coastal watershed in New Hampshire, USA to understand how suburbanization changes ecosystem and CZ processes that influence solute export and surface water chemistry. CQ relationships for calcium (Ca2+), potassium (K+), and non-purgeable organic carbon (NPOC) were examined across land-use / land-cover regimes and stream orders over decadal moving-window and seasonal time scales. Both spatial and temporal variability were found in CQ behavior of the major weathering solutes. These analyses suggest such behaviors can be used to describe CZ properties and ecosystem processes including senescence and snow melt, for example. Initial analysis shows seasonal CQ dynamics of K+ deviate from expected base cation behavior. Such changes may be partially driven by shifts in precipitation intensity across the region or biological processes like decomposition that vary seasonally. Additionally, these findings suggest that the implementation of moving-window time series may be crucial to understanding how CZs respond to disturbances such as expanding anthropogenic development and climate change over time.
+
+# GitHub Repository:
+
+## <https://github.com/ericmparker/RClass>
+
+# 1. Introduction
+
+Amid rapid ecosystem evolution driven by human-induced climate change, it is increasingly important for humanity to better understand its relationship with the environment and the associated exchange of impacts on natural resources. The Critical Zone (CZ, Fig. 1) is the nexus of air, biota, soil, water, and rock that comprises Earth's "living skin" (Brantley et al., 2017; White et al., 2015). The application of such holistic conceptual frameworks can leverage the integrative nature of streams to offer powerful insights into the drainage basins through which their waters flow (Bailey et al., 2014; Brooks et al., 2015; Chorover et al., 2011; Fan et al., 2019; Gibbs, 1970; Wymore et al., 2017, 2023). Further focus on the relationships between surface water discharge and solute concentrations broadly informs on interactions between watershed characteristics and ecosystem processes such as weathering rates (Clow & Drever, 1996; Musolff et al., 2015), stream metabolism (O'Donnell & Hotchkiss, 2019), land-use / land-cover (Burt & Pinay, 2005; Coble et al., 2022), and even groundwater chemistry (Stewart et al., 2022). These concentration-discharge (CQ) relationships are crucial to understanding the hydro-biogeochemical cycling of elements through CZs in the Anthropocene.
+
+![CZ Illustration](cz.png) Figure 1. A visual depicting the interconnection of the atmosphere, biosphere, pedosphere, hydrosphere, and lithosphere that forms the Critical Zone. Adapted from Brantley et. al. (2017).
+
+CQ analyses gain their descriptive merit through an equation derived from applying a power-law relationship:
+
+```         
+  Eq.1: C = aQ^b
+```
+
+where (a) is a constant that describes the intercept in units of concentration (Hall, 1970) and the exponent describes the unitless slope (b) of the equation on logarithmically transformed axes, which has direct hydrogeochemical interpretations (Evans & Davies, 1998; Godsey et al., 2009; Hall, 1971). The slope behaviors generally fall into two categories: chemostatic ( \|slope\| \~ 0) and chemodynamic ( \|slope\| \> 0), with the latter further separated into mobilization (slope \> 0) and dilution (slope \< 0) responses (Fig. 2; Fazekas et al., 2020; Zimmer et al., 2019). A dilution response often describes a source limitation, where the solute behaves as a finite resource in the watershed, whereas mobilization describes a transport limited solute flushing in connection with increased discharge through the system (Basu et al., 2011). While commonly associated with the release of solutes unrestricted by a supply limitation, such as easily weathered minerals and accumulated nutrient stores from agricultural practices (Basu et al., 2011; David W. Clow & Mast, 2010; Godsey et al., 2009, 2019), chemostatic responses are sometimes complex: They can also be derived from rainfall-induced hydrologic displacement of groundwater (Cartwright et al., 2020; David W. Clow & Mast, 2010; Uhlenbrook & Hoeg, 2003) and soil water (Blumstock et al., 2015; Cartwright et al., 2018; Fischer et al., 2016), which have signals more closely aligned with the baseflow signature than generally dilute rainwater runoff. These complications often require cross-solute / site analysis to identify the driving mechanism of chemostatic behavior.
+
+![CQ Slope Primer](cq_primer.png) Figure 2. Displays the three CQ slope relationships associated with the equation C=aQ\^b. A constant slope is designated chemostatic, a positive slope is defined as mobilization, and a negative slope describes dilution. Adapted from Speir et al., 2023.
+
+# 2. Methods
+
+## 2a. The Lamprey River Hydrological Observatory
+
+The Lamprey River Hydrological Observatory (LRHO) was established at the turn of the millennium to evaluate how shifts in CZ structure impact water quality over time (Wymore et al., 2021). The LRHO is a temperate, forest-dominated watershed with a history of agricultural land abandonment that is undergoing the effects of expanding suburbanization (Fig. 3). Located in southeastern New Hampshire (USA), the LRHO flows into Great Bay Estuary---a body of water with significant economic and cultural value that is threatened by nutrient impairment (Shattuck et al., 2016). The LRHO consists of 21 sites (9 tributary and 12 mainstem, Fig. 4) representative of the regional CZ across the reach that are sampled at weekly, monthly, or quarterly intervals. All samples are collected an analyzed according to the University of New Hampshire Water Quality Analysis Lab's protocols (Wymore et al., 2021).
+
+![A map of the LRHO with land use regimes.](lrho.png) Figure 3. The Lamprey River Hydrological Observatory in New Hampshire, USA, with land-use patterns across the watershed. From Wymore et al. 2021.
+
+![Site descriptions for the LRHO](lrho_sites.png) Figure 4. Site information for each of the 21 sampling locations in the LRHO. From Wymore et. al. 2021
+
+## 2b. Data Acquisition and Cleaning
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+# Pull in the LRHO data
+
+lrho <- read.csv("20210706 Lamprey Streams Shallow GW Organic Dairy selected updated 0825 w USGS Oct22 SiO2.csv")
+
+# Figure out what is going on with all the different phosphate columns, lacking a summary column:
+
+lrho_phos <- lrho %>%
+  select(PO4ugPL, PO4Flag, PO4PugLDiscreet, PO4_Instrument, PO4PugLLachat, PO4_Bad, PO4_Bad_KS, PO4_Lachat_Bad, PO4_Lachat_Bad_KS)
+
+# Combine the different phosphate instrument results into one column with proper priority:
+
+lrho <- mutate_at(lrho, vars(PO4PugLDiscreet, PO4ugPL, PO4PugLLachat), as.numeric)
+
+lrho <- mutate(lrho, comb_PO4ugPL = coalesce(PO4PugLDiscreet, PO4ugPL, PO4PugLLachat))
+
+# Load in the USGS data for the Lamprey River near Newmarket:
+
+lamprey1_usgs <- "01073500"
+lamprey1info <- readNWISsite(lamprey1_usgs)
+
+# Pull average daily discharge data in m3/s for a given time-range
+readNWISmeas(lamprey1_usgs, "2023-01-01", "2023-10-31")
+readNWISdv(lamprey1_usgs,"00060", startDate = "2023-01-01", endDate = "2023-10-31")
+
+# Look at the date range starting in year 2000 and assign values for dataset incorporation
+usgs_q_nm <- readNWISdv(lamprey1_usgs,"00060", startDate = "1999-10-01", endDate = "2023-10-31")
+
+summary(usgs_q_nm)
+
+usgs_q_nm$CollectionDate <- usgs_q_nm$Date
+usgs_q_nm$usgs_nm_q_m3s <- usgs_q_nm$X_00060_00003
+
+usgs_q_nm <- usgs_q_nm %>%
+  select(usgs_nm_q_m3s, CollectionDate) %>%
+  drop_na()
+
+# Combine the LRHO and USGS data and filter for relevance:
+
+# Combine
+lrho$CollectionDate <- dmy(lrho$CollectionDate)
+
+lrho_q <- left_join(lrho, usgs_q_nm, by = "CollectionDate")
+
+head(lrho_q)
+
+# Filter
+lrho_q_wrk <- lrho_q %>%
+  select(Station_ID, CollectionDate, NPOCmgCL, TDNmgNL, TNmgNL, NH4ugNL, NO3_Final, ClmgClL, NamgNaL, Spec_Cond, SO4mgSL, KmgKL, MgmgMgL, CamgCaL, comb_PO4ugPL, pH, Cond, DOmgL, DO, Temperature, Turbidity, Abs254, SUVA, NPOCmgCL, SiO2mgSiO2L_New, DIC,usgs_nm_q_m3s, FieldNotes, Lab_Notes, CollectionTime) %>%
+  filter(CollectionDate >= "2000-01-01", CollectionDate <= "2021-06-30")
+
+# Reformat the appropriate data columns as numeric and remove negative value errors:
+  
+lrho_q_wrk <- mutate_at(lrho_q_wrk, vars(NPOCmgCL, TDNmgNL, TNmgNL, NH4ugNL, NO3_Final, ClmgClL, NamgNaL, Spec_Cond, SO4mgSL, KmgKL, MgmgMgL, CamgCaL, comb_PO4ugPL, pH, Cond, DOmgL, DO, Temperature, Turbidity, Abs254, SUVA, NPOCmgCL, SiO2mgSiO2L_New, DIC), as.numeric)
+
+lrho_q_wrk <- mutate_at(lrho_q_wrk, vars(NPOCmgCL, TDNmgNL, TNmgNL, NH4ugNL, NO3_Final, ClmgClL, NamgNaL, Spec_Cond, SO4mgSL, KmgKL, MgmgMgL, CamgCaL, comb_PO4ugPL, pH, Cond, DOmgL, DO, Temperature, Turbidity, Abs254, SUVA, NPOCmgCL, SiO2mgSiO2L_New, DIC), ~ifelse(. < 0, NA, .))
+
+# Correct discharge values for site watershed area:
+
+stationids <- unique(lrho_q_wrk$Station_ID)
+
+#Filter for the relevant surface water sites
+lrho_q_wrk_surface <- lrho_q_wrk %>%
+  filter(lrho_q_wrk$Station_ID == "WHB01" | lrho_q_wrk$Station_ID == "NOR27" | lrho_q_wrk$Station_ID == "LMP51" | lrho_q_wrk$Station_ID == "LMP39" | lrho_q_wrk$Station_ID == "LMP27" | lrho_q_wrk$Station_ID == "LMP19" | lrho_q_wrk$Station_ID == "LMP07" | lrho_q_wrk$Station_ID == "LMP73" | lrho_q_wrk$Station_ID == "LMP72" | lrho_q_wrk$Station_ID == "LMP59" | lrho_q_wrk$Station_ID == "LMP67" | lrho_q_wrk$Station_ID == "NBR12" | lrho_q_wrk$Station_ID == "RMB04" | lrho_q_wrk$Station_ID == "LTR20" | lrho_q_wrk$Station_ID == "PWT03" | lrho_q_wrk$Station_ID == "PWT10" | lrho_q_wrk$Station_ID == "MLB01" | lrho_q_wrk$Station_ID == "SBM0.2" | lrho_q_wrk$Station_ID == "DCF03" | lrho_q_wrk$Station_ID == "BDC0.30")
+
+# Assign watershed area values and ratio calculation for Q correction
+lrho_watershed_area <- data.frame(
+  Station_ID = c("WHB01", "NOR27","LMP51", "LMP39", "LMP27", "LMP19", "LMP07", "LMP73", "LMP72", "LMP59", "LMP67", "NBR12", "RMB04", "LTR20", "PWT03", "PWT10", "MLB01", "SBM0.2", "DCF03", "BDC0.30"),
+  watershed_area_km2 = c(1.0, 128.9, 251.7, 197.9, 144.3, 80.1, 15.1, 479.2, 476.9, 396.6, 469.3, 41.5, 4.9, 51.7, 2.6, 25.5, 0.9, 0.3, 7.0, 0.3)
+)
+
+lrho_watershed_area <- lrho_watershed_area %>%
+  summarize(Station_ID, watershed_area_km2, watershed_ratio_usgs_nm = (watershed_area_km2/479.2))
+
+lrho_q_wrk_surface <- left_join(lrho_q_wrk_surface, lrho_watershed_area, by = "Station_ID")
+
+lrho_q_wrk_surface$q_corr_usgs_nm_m3s <- (lrho_q_wrk_surface$usgs_nm_q_m3s*lrho_q_wrk_surface$watershed_ratio_usgs_nm)
+
+# Add new relevant date columns for graphing:
+
+lrho_q_wrk_surface$YearDay <- format(lrho_q_wrk_surface$CollectionDate, format = "%j")
+
+lrho_q_wrk_surface$Month <- format(lrho_q_wrk_surface$CollectionDate, format = "%m")
+
+lrho_q_wrk_surface$YearMo <- format(lrho_q_wrk_surface$CollectionDate, format = "%y%m")
+
+# Format the newly minted columns
+
+lrho_q_wrk_surface <- mutate_at(lrho_q_wrk_surface, vars(YearDay, Month, YearMo, q_corr_usgs_nm_m3s), as.numeric)
+
+# Create a season column based on YearDay
+lrho_q_wrk_surface$season <- numeric(nrow(lrho_q_wrk_surface))
+season_range <- c(0, 90, 181, 273, 365)
+
+for (i in 1:nrow(lrho_q_wrk_surface)) {
+  YearDay <- lrho_q_wrk_surface$YearDay[i]
+  
+  for (group in 1:4) {
+    if (YearDay <= season_range[group + 1] && YearDay >= season_range[group]) {
+      lrho_q_wrk_surface$season[i] <- group
+      break  # Break out of the inner loop once the group is assigned
+    }
+  }
+}
+
+
+# Outlier removal
+
+lrho_q_wrk_surface <- mutate_at(lrho_q_wrk_surface, vars(CamgCaL), ~ifelse(. < 1, NA, .))
+
+lrho_q_wrk_surface <- lrho_q_wrk_surface %>%
+  mutate(CamgCaL = ifelse(Station_ID == "WHB01" & CamgCaL < 3, NA, CamgCaL))
+
+lrho_q_wrk_surface <- lrho_q_wrk_surface %>%
+  mutate(KmgKL = ifelse(Station_ID == "LMP73" & KmgKL < (0.3), NA, KmgKL))
+
+lrho_q_wrk_surface <- lrho_q_wrk_surface %>%
+  mutate(KmgKL = ifelse(Station_ID == "LMP73" & KmgKL > 8, NA, KmgKL))
+
+lrho_q_wrk_surface <- lrho_q_wrk_surface %>%
+  mutate(KmgKL = ifelse(Station_ID == "LMP19" & KmgKL > (2.8), NA, KmgKL))
+
+lrho_q_wrk_surface <- lrho_q_wrk_surface %>%
+  mutate(KmgKL = ifelse(Station_ID == "WHB01" & KmgKL > 10, NA, KmgKL))
+
+lrho_q_wrk_surface <- lrho_q_wrk_surface %>%
+  mutate(KmgKL = ifelse(Station_ID == "WHB01" & KmgKL < (0.3), NA, KmgKL))
+
+lrho_q_wrk_surface <- lrho_q_wrk_surface %>%
+  mutate(KmgKL = ifelse(Station_ID == "PWT03" & KmgKL > 8, NA, KmgKL))
+
+```
+
+Chemistry data from the LRHO and daily average discharge data (in m^3/s) from USGS Station 01073500 at Newmarket, NH for the relevant temporal ranges were imported via the ‘read.csv’ and ‘readNWISdv’ (from the USGS dataRetrieval package) commands, respectively. Packages from the tidyverse were then leveraged to collate and clean the data. Lacking a summary column, the values for each instrument used to analyze phosphate were combined into a single column in order of proper priority. The USGS data was joined with the LRHO chemistry data by collection date. The resulting data set was then filtered and formatted appropriately for those site and analyte columns relevant to the intended analyses. Any chemistry samples with a negative values were removed from the selection, as were select outliers (after graphical evaluation). Discharge data were corrected by watershed area (as a ratio compared to LMP73, which is located at the USGS gauging station) and average daily values were assigned to all sites accordingly. 
+
+## 2c. Seasonal Graphs
+
+Graphs for all sites (except LMP78) were made using ggplot2 to evaluate the CQ relationships broken down by season for 18 analytes over the study period from 2000 – 2021. Seasons were delineated by Julian day as such: winter (1-90), spring (91-181), summer (182-273), and fall (274-365). The resulting graphs were then analyzed to identify noteworthy dynamics for further study. All graphs can be found in Appendix A.
+
+Ca2+, K+, and NPOC were identified as noteworthy solutes following seasonal graphical analysis. Further, four sites of focus (LMP19, LMP73, PWT03, and WHB01) were chosen based on their notable representation of the Lamprey River CZ. LMP19 and LMP73 were chosen to compare dynamics between up and down-stream sites along the main-stem river. PWT03 and WHB01 were chosen based on their contrasting land-use / land-cover as undeveloped wetland and suburban tributaries, respectively. 
+
+## 2d. Seasonal Moving Windows
+
+A for-loop was constructed to apply a linear model and then extract the CQ slope and standard error from each site for a given analyte from 2000-01-01 to 2010-01-01. The window was then subsequently shifted one year forward at each end until 2011-01-01 to 2021-01-01. The resulting outputs were then combined between sites by analyte. After merging, the column outputs of the for-loops needed to be restructured for graphical analysis. The resulting graphical representation of the moving window offers a unique temporal perspective of decadal trends in CQ over the study extent. For the purpose of this analysis, CQ slopes behaviors are interpreted thus: Dilution = Slope < -0.1, Chemostasis = -0.1 > slope < 0.1, and mobilization = slope > 0.1. A dotted line brackets chemostasis on each graph to make shifts in behavior easier to discern.
+
+```{r, include=FALSE}
+# Model parameters:
+
+year_shifts <- 12
+low_year <- 2000
+high_year <- 2010
+```
+
+
+```{r, include=FALSE, warning=FALSE, message=FALSE}
+# LMP19
+
+#K
+
+dfs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("LMP19"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(KmgKL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(KmgKL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+lmp19_k_window <- do.call(bind_cols, dfs)
+
+lmp19_k_window <- lmp19_k_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+#Ca
+
+fs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("LMP19"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(CamgCaL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(CamgCaL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+lmp19_ca_window <- do.call(bind_cols, dfs)
+
+lmp19_ca_window <- lmp19_ca_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+#NPOC
+
+fs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("LMP19"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(NPOCmgCL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(NPOCmgCL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+lmp19_npoc_window <- do.call(bind_cols, dfs)
+
+lmp19_npoc_window <- lmp19_npoc_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+
+# LMP73
+
+#K
+
+dfs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("LMP73"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(KmgKL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(KmgKL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+lmp73_k_window <- do.call(bind_cols, dfs)
+
+lmp73_k_window <- lmp73_k_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+#Ca
+
+fs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("LMP73"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(CamgCaL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(CamgCaL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+lmp73_ca_window <- do.call(bind_cols, dfs)
+
+lmp73_ca_window <- lmp73_ca_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+#NPOC
+
+fs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("LMP73"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(NPOCmgCL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(NPOCmgCL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+lmp73_npoc_window <- do.call(bind_cols, dfs)
+
+lmp73_npoc_window <- lmp73_npoc_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+
+# PWT03
+
+#K
+
+dfs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("PWT03"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(KmgKL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(KmgKL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+pwt03_k_window <- do.call(bind_cols, dfs)
+
+pwt03_k_window <- pwt03_k_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+#Ca
+
+fs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("PWT03"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(CamgCaL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(CamgCaL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+pwt03_ca_window <- do.call(bind_cols, dfs)
+
+pwt03_ca_window <- pwt03_ca_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+
+#NPOC
+
+fs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("PWT03"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(NPOCmgCL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(NPOCmgCL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+pwt03_npoc_window <- do.call(bind_cols, dfs)
+
+pwt03_npoc_window <- pwt03_npoc_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+
+# WHB01
+
+#K
+
+dfs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("WHB01"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(KmgKL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(KmgKL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+whb01_k_window <- do.call(bind_cols, dfs)
+
+whb01_k_window <- whb01_k_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+#Ca
+
+fs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("WHB01"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(CamgCaL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(CamgCaL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+whb01_ca_window <- do.call(bind_cols, dfs)
+
+whb01_ca_window <- whb01_ca_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+#NPOC
+
+fs <- list()
+
+for (shift in 0:(year_shifts - 1)) {
+  start_date <- paste0(as.numeric(low_year) + shift, "-01-01")
+  end_date <- paste0(as.numeric(high_year) + shift, "-01-01")
+
+  site_lm <- lrho_q_wrk_surface %>%
+    filter(Station_ID %in% c("WHB01"), CollectionDate >= start_date, CollectionDate <= end_date) %>%
+    group_by(Station_ID, season) %>%
+    summarize(
+      slope = ifelse(n() > 0, coef(lm(log(NPOCmgCL) ~ log(q_corr_usgs_nm_m3s)))[2], NA),
+      se = ifelse(n() > 0, summary(lm(log(NPOCmgCL) ~ log(q_corr_usgs_nm_m3s)))$coef[2, "Std. Error"], NA)
+    )
+  
+  slope_column_name <- paste("slope", shift, sep = "_")
+  se_column_name <- paste("se", shift, sep = "_")
+  
+  if (nrow(site_lm) > 0) {
+    temp_df <- site_lm %>%
+      mutate(
+        .data = .,
+        !!slope_column_name := slope,
+        !!se_column_name := se
+      ) %>%
+      select(-slope, -se)
+    
+    dfs[[shift + 1]] <- temp_df
+  } else {
+    warning(paste("No data for shift", shift, ". Skipping..."))
+  }
+}
+
+whb01_npoc_window <- do.call(bind_cols, dfs)
+
+whb01_npoc_window <- whb01_npoc_window[, -c(5, 6, 9, 10, 13, 14, 17, 18, 21, 22, 25, 26, 29, 30, 33, 34, 37, 38, 41, 42, 45, 46)]
+
+
+
+#Combine for each analyte
+
+comp_ca_window <- rbind(pwt03_ca_window, lmp19_ca_window, lmp73_ca_window, whb01_ca_window)
+
+comp_ca_window <- comp_ca_window %>%
+  rename(Station_ID = Station_ID...1, season = season...2)
+
+comp_k_window <- rbind(pwt03_k_window, lmp19_k_window, lmp73_k_window, whb01_k_window)
+
+comp_k_window <- comp_k_window %>%
+  rename(Station_ID = Station_ID...1, season = season...2)
+
+comp_npoc_window <- rbind(pwt03_npoc_window, lmp19_npoc_window, lmp73_npoc_window, whb01_npoc_window)
+
+comp_npoc_window <- comp_npoc_window %>%
+  rename(Station_ID = Station_ID...1, season = season...2)
+
+# Restructure columns
+
+comp_ca_window_long <- comp_ca_window %>%
+  gather(key, value, -Station_ID, -season) %>%
+  separate(key, into = c("var", "shift"), sep = "_", convert = TRUE)
+
+comp_ca_window_g <- spread(comp_ca_window_long, key = var, value = value)
+
+comp_k_window_long <- comp_k_window %>%
+  gather(key, value, -Station_ID, -season) %>%
+  separate(key, into = c("var", "shift"), sep = "_", convert = TRUE)
+
+comp_k_window_g <- spread(comp_k_window_long, key = var, value = value)
+
+comp_npoc_window_long <- comp_npoc_window %>%
+  gather(key, value, -Station_ID, -season) %>%
+  separate(key, into = c("var", "shift"), sep = "_", convert = TRUE)
+
+comp_npoc_window_g <- spread(comp_npoc_window_long, key = var, value = value)
+
+```
+
+# 3. Results
+
+## 3a. Selected Seasonal CQ Analyses
+
+
+
+```{r, echo=FALSE, message=FALSE,warning=FALSE}
+
+# Selected Ca Seasonal
+
+ggplot(subset(lrho_q_wrk_surface, Station_ID %in% c("LMP19", "LMP73", "PWT03", "WHB01")), aes(x=q_corr_usgs_nm_m3s, y=CamgCaL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(Ca2+ [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Ca2+ CQ By Season from 2000 - 2021")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+
+```
+Figure 5. Seasonal CQ dynamics of Ca2+ at LMP19, LMP73, PWT03, and WHB01 from 2000 - 2021. 
+
+The seasonal Ca2+ dynamics (Fig. 5) show a strong dilution relationship at both LMP19 and LMP73 through all seasons. PWT03 follows a similar trend in all seasons except summer, where it trends chemostatic. WHB01 also trends chemostaic in the summer and towards dilution in other seasons, but with higher slope than the other three sites.
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Selected K Seasonal
+
+ggplot(subset(lrho_q_wrk_surface, Station_ID %in% c("LMP19", "LMP73", "PWT03", "WHB01")), aes(x=q_corr_usgs_nm_m3s, y=KmgKL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(K+ [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("K+ CQ By Season from 2000 - 2021")+scale_color_manual(name="Season",
+                                                                               values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                               labels = c("Winter", "Spring", "Summer", "Fall"))
+```
+Figure 6. Seasonal CQ dynamics of K+ at LMP19, LMP73, PWT03, and WHB01 from 2000 - 2021.
+
+The seasonal K+ dynamics (Fig. 6) again show strong agreement between the two main stem sites, with both showing strong dilution responses that become less pronounced in the winter and spring. PWT03 displays a chemostatic relationship in all seasons except winter where it dilutes. WHB01 moves from a strong to weak dilution realtioship from winter to spring. It then moves to chemostasis in the summer before returning to weak dilution in the fall.
+
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+
+
+# Selected NPOC Seasonal
+
+ggplot(subset(lrho_q_wrk_surface, Station_ID %in% c("LMP19", "LMP73", "PWT03", "WHB01")), aes(x=q_corr_usgs_nm_m3s, y=NPOCmgCL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(C [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("NPOC CQ By Season from 2000 - 2021")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+```
+Figure 7. Seasonal CQ dynamics of NPOC at LMP19, LMP73, PWT03, and WHB01 from 2000 - 2021.
+
+The seasonal NPOC dynamics (Fig. 7) at LMP19 show slight mobilization in the winter that shifts to chemostasis in spring. Strong mobilization signals in the summer then shift to chemostasis in the fall. LMP73, in contrast, has strong signals of mobilization in summer and fall tempered by stready chemostasis in winter and spring. PWT03 has chemostatic signals that appear slightly diluting, except in spring where the dilution trend is stronger. WHB01 slightly mobilizes in winter and spring, a response that becomes much more strong in the summer before shifting to chemostasis in the fall.
+
+
+## 3b. Seasonal Moving Windows
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# Ca
+
+ggplot(comp_ca_window_g, aes(x = factor(shift), y = slope, group = season, color = cut(season, breaks = c(0, 1, 2, 3, 4)))) +
+  geom_point(size = 4, pch = 16) +
+  geom_line(size = 2)+
+  geom_ribbon(aes(ymin = slope - se, ymax = slope + se), alpha = 0.2, linetype = 0) +
+  geom_hline(yintercept = c(-0.1, 0.1), linetype = "dashed", color = "black") +
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="Window Shift", y = "CQ Slope")+
+  theme_cowplot()+
+  theme(aspect.ratio = 1)+
+  ggtitle("10-Year Window of Ca2+ CQ Slope Over Time")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+```
+Figure 8. Seasonal 10-year moving window for CQ dynamics of Ca2+ at LMP19, LMP73, PWT03, and WHB01 from 2000 - 2021.
+
+The decadal moving window for Ca2+ (Fig. 8) at LMP19 shows a significant trend towards increasing dilution behavior for all seasons. LMP73 shows a comparatively weaker trend in dilution during summer and fall; winter and spring appear variable but within a more defined range. PWT03 remains stable in the winter but shows a remarkable shift to dilution in the spring in recent years. Summer dips towards dilution half way through the timeline, but recovers back to near its original strong chemostasis. WHB01 shows a shift from significant seasonal differences towards convergent chemostasis over the study.
+
+
+```{r, message=FALSE,warning=FALSE, echo=FALSE}
+# K
+
+ggplot(comp_k_window_g, aes(x = factor(shift), y = slope, group = season, color = cut(season, breaks = c(0, 1, 2, 3, 4)))) +
+  geom_point(size = 4, pch = 16) +
+  geom_line(size = 2)+
+  geom_ribbon(aes(ymin = slope - se, ymax = slope + se), alpha = 0.2, linetype = 0) +
+  geom_hline(yintercept = c(-0.1, 0.1), linetype = "dashed", color = "black") +
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="Window Shift", y = "CQ Slope")+
+  theme_cowplot()+
+  theme(aspect.ratio = 1)+
+  ggtitle("10-Year Window of K+ CQ Slope Over Time")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+```
+Figure 9. Seasonal 10-year moving window for CQ dynamics of K+ at LMP19, LMP73, PWT03, and WHB01 from 2000 - 2021.
+
+
+The decadal moving window for K+ (Fig. 9) shows a slight trend towards dilution at LMP73 for all seasons but winter which moves to be more chemostatic over time. There is less inter-seasonal variability over time at both LMP73 and WHB01, notably both also see a shift from dilution to chemostasis over time during the winter. WHB01 becomes more chemostatic in the summer, however, while LMP73 trends firmly into dilution. PWT03 has some shifts over time during spring, summer, and fall that largely remain chemostaic, while winter retains a consistent strong dilution behavior throughout. 
+
+
+
+```{r, message=FALSE, warning=FALSE, echo=FALSE}
+# NPOC
+
+ggplot(comp_npoc_window_g, aes(x = factor(shift), y = slope, group = season, color = cut(season, breaks = c(0, 1, 2, 3, 4)))) +
+  geom_point(size = 4, pch = 16) +
+  geom_line(size = 2)+
+  geom_ribbon(aes(ymin = slope - se, ymax = slope + se), alpha = 0.2, linetype = 0) +
+  geom_hline(yintercept = c(-0.1, 0.1), linetype = "dashed", color = "black") +
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="Window Shift", y = "CQ Slope")+
+  theme_cowplot()+
+  theme(aspect.ratio = 1)+
+  ggtitle("10-Year Window of NPOC CQ Slope Over Time")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+```
+Figure 10. Seasonal 10-year moving window for CQ dynamics of NPOC at LMP19, LMP73, PWT03, and WHB01 from 2000 - 2021.
+
+The decadal moving window for NPOC (Fig. 10) at PWT03 shows a similar sudden shift to strong dilution in the spring similar to that of it's Ca2+ response during the same intervals. The other seasons shift from dilution to chemostasis over time. LMP19 shows an increasing mobilization trend during summer that is matched in winter. Spring and fall remain chemostatic throughout, but spring moves from more mobilizing to more chemostatic whereas fall does the opposite. Spring and summer at LMP73 are consistently chemostatic and mobilizing, respectively. Fall appears to shift from mobilization into dilution and back again over time, whereas winter trends toward mobilization while staying within the bounds of chemostasis. WHB01 uniquely retains similar relationships between the relative different in slope between seasons while becoming increasingly mobilizing over time.   
+
+# 4. Discussion
+
+## 4a. Chemostasis and Shifting Seasons
+
+Despite their disparate locations in the watershed and contrasted LULC, both PWT03 and WHB01 both exhibit a chemostatic relationship for K+ across multiple seasons. There is strong evidence that watersheds heavily inundated with solutes can move beyond source limitation to trend chemostatic due to accumulated ecosystem storage thereof (Basu et al., 2011; Blumstock et al., 2015; Godsey et al., 2019; Van Meter et al., 2017). The trends we see in both Ca2+ and K+ (Fig. 8 & 9) towards chemostasis at WHB01 may be attributed to this phenomenon as human development and its subsequent impacts on the local CZ increase over the study timeframe, like increased road salt application. This source also offers a potential explanation of its shift in winter CQ when road salt is applied. Conversely, PWT03 is among the least developed sites in the LRHO network. Its K+ chemostasis (Fig. 9) is more likely tied to the nature of wetlands and their abundant aquatic vegetation. Historical understanding suggests that trends in K stream water concentration are largely driven by seasonal cycles of plant growth and soil weathering (Chaudhuri et al., 2007; Likens et al., 1994). The relative stability of the dilution relationship in winter when plants are not active, and soil may be frozen, supports this hypothesis. While much of the LRHO is heavily forested, the impact of plants actively driving uptake in the water column itself may compound the relationship, causing it to supersede other sites with only transient litter input. Along that line, the drastic spring shift seen across the many sites and solutes (Fig. 8, 9, & 10) may also be tied to plant growth. As the vernal window continues shifting due to climate change, the increasingly erratic occurrence of late-season freezes that stress and kill plants (Contosta et al., 2017) may be disrupting plant-supported or driven CQ dynamics. These examples highlight the importance of evaluating CQ solute dynamics not just seasonally but also as nuanced trends among those seasons over time.
+
+## 4b. Lookin to the Future
+
+CQ relationships have been historically evaluated on relatively simple timescales, most often either looking at all data for an extended period concurrently (Godsey et al., 2009; Hall, 1970, 1971) or narrowing focus onto specific events (Evans & Davies, 1998; Godsey et al., 2019). When evaluating data at such a coarse scale, nuance is inevitably lost. While the widespread adoption of high frequency sensors creates exciting opportunities to have an effectively unlimited temporal analysis, they create a different set of challenges (Carey et al., 2014; Koenig et al., 2017; Snyder et al., 2018; Wollheim et al., 2017). The cost associated with establishing a robust network can be a significant hurdle for researchers. Additionally, the cost and effort required to maintain them can become prohibitive. The LRHO’s own sensor network is slowly dwindling as the aging sensor units begin to break down faster than they can be realistically repaired. Further still, as an emergent technology, the breadth of long-term sensor sampling records pales in comparison to their conventionally collected counterparts—many of which extend for decades (Likens et al., 1994; Shanley et al., 2011; Wymore et al., 2021). As such, for the time being sensors cannot meet the needs of researchers especially interested in exploring long-term trends. Moving window seasonal CQ analyses offer a novel approach to leveraging these historic data resources in a way that may be capable of filling this niche. 
+
+# 5. Conclusion
+
+As climate change continues to disrupt the balance of ecosystems during the Anthropocene, it is increasingly important for communities to understand the exchange of impacts between themselves and their environment. Watersheds contain an integrative signal that allows them to describe and inform the Critical Zone through which their waters flow. CQ analyses are powerful analytical tools that allow scientists to explore such ecosystem connections. The significant differences demonstrated at many sites between both the seasonal dynamics of analytes and how those dynamics changed over time the 20-year study period makes a strong argument for the necessity of exploring these temporal divisions  
+
+# References
+
+Bailey, S. W., Brousseau, P. A., McGuire, K. J., & Ross, D. S. (2014). Influence of landscape position and transient water table on soil development and carbon distribution in a steep, headwater catchment. Geoderma, 226, 279–289. https://doi.org/10.1016/j.geoderma.2014.02.017
+Basu, N. B., Thompson, S. E., & Rao, P. S. C. (2011). Hydrologic and biogeochemical functioning of intensively managed catchments: A synthesis of top-down analyses. Water Resources Research, 47(10). https://doi.org/10.1029/2011WR010800
+Blumstock, M., Tetzlaff, D., Malcolm, I. A., Nuetzmann, G., & Soulsby, C. (2015). Baseflow dynamics: Multi-tracer surveys to assess variable groundwater contributions to montane streams under low flows. Journal of Hydrology, 527, 1021–1033. https://doi.org/10.1016/j.jhydrol.2015.05.019
+Brantley, S. L., McDowell, W. H., Dietrich, W. E., White, T. S., Kumar, P., Anderson, S. P., et al. (2017). Designing a network of critical zone observatories to explore the living skin of the terrestrial Earth. Earth Surface Dynamics, 5(4), 841–860. https://doi.org/10.5194/esurf-5-841-2017
+Brooks, P. D., Chorover, J., Fan, Y., Godsey, S. E., Maxwell, R. M., McNamara, J. P., & Tague, C. (2015). Hydrological partitioning in the critical zone: Recent advances and opportunities for developing transferable understanding of water cycle dynamics. Water Resources Research, 51(9), 6973–6987. https://doi.org/10.1002/2015WR017039
+Burt, T. P., & Pinay, G. (2005). Linking hydrology and biogeochemistry in complex landscapes. Progress in Physical Geography-Earth and Environment, 29(3), 297–316. https://doi.org/10.1191/0309133305pp450ra
+Carey, R. O., Wollheim, W. M., Mulukutla, G. K., & Mineau, M. M. (2014). Characterizing Storm-Event Nitrate Fluxes in a Fifth Order Suburbanizing Watershed Using In Situ Sensors. Environmental Science & Technology, 48(14), 7756–7765. https://doi.org/10.1021/es500252j
+Cartwright, I., Atkinson, A. P., Gilfedder, B. S., Hofmann, H., Cendón, D. I., & Morgenstern, U. (2018). Using geochemistry to understand water sources and transit times in headwater streams of a temperate rainforest. Applied Geochemistry, 99, 1–12. https://doi.org/10.1016/j.apgeochem.2018.10.018
+Cartwright, I., Morgenstern, U., & Hofmann, H. (2020). Concentration versus streamflow trends of major ions and tritium in headwater streams as indicators of changing water stores. Hydrological Processes, 34(2), 485–505. https://doi.org/10.1002/hyp.13600
+Chaudhuri, S., Clauer, N., & Semhi, K. (2007). Plant decay as a major control of river dissolved potassium: A first estimate. Chemical Geology, 243(1), 178–190. https://doi.org/10.1016/j.chemgeo.2007.05.023
+Chorover, J., Troch, P. A., Rasmussen, C., Brooks, P. D., Pelletier, J. D., Breshears, D. D., et al. (2011). How Water, Carbon, and Energy Drive Critical Zone Evolution: The Jemez-Santa Catalina Critical Zone Observatory. Vadose Zone Journal, 10(3), 884–899. https://doi.org/10.2136/vzj2010.0132
+Clow, D. W., & Drever, J. I. (1996). Weathering rates as a function of flow through an alpine soil. Chemical Geology, 132(1), 131–141. https://doi.org/10.1016/S0009-2541(96)00048-4
+Clow, David W., & Mast, M. A. (2010). Mechanisms for chemostatic behavior in catchments: Implications for CO2 consumption by mineral weathering. Chemical Geology, 269(1), 40–51. https://doi.org/10.1016/j.chemgeo.2009.09.014
+Coble, A. A., Wymore, A. S., Potter, J. D., & McDowell, W. H. (2022). Land Use Overrides Stream Order and Season in Driving Dissolved Organic Matter Dynamics Throughout the Year in a River Network. Environmental Science & Technology, 56(3), 2009–2020. https://doi.org/10.1021/acs.est.1c06305
+Contosta, A. R., Adolph, A., Burchsted, D., Burakowski, E., Green, M., Guerra, D., et al. (2017). A longer vernal window: the role of winter coldness and snowpack in driving spring transitions and lags. Global Change Biology, 23(4), 1610–1625. https://doi.org/10.1111/gcb.13517
+Evans, C., & Davies, T. D. (1998). Causes of concentration/discharge hysteresis and its potential as a tool for analysis of episode hydrochemistry. Water Resources Research, 34(1), 129–137. https://doi.org/10.1029/97WR01881
+Fan, Y., Clark, M., Lawrence, D. M., Swenson, S., Band, L. E., Brantley, S. L., et al. (2019). Hillslope Hydrology in Global Change Research and Earth System Modeling. Water Resources Research, 55(2), 1737–1772. https://doi.org/10.1029/2018WR023903
+Fazekas, H. M., Wymore, A. S., & McDowell, W. H. (2020). Dissolved Organic Carbon and Nitrate Concentration-Discharge Behavior Across Scales: Land Use, Excursions, and Misclassification. Water Resources Research, 56(8), e2019WR027028. https://doi.org/10.1029/2019WR027028
+Fischer, B. M. C., Stähli, M., & Seibert, J. (2016). Pre-event water contributions to runoff events of different magnitude in pre-alpine headwaters. Hydrology Research, 48(1), 28–47. https://doi.org/10.2166/nh.2016.176
+Gibbs, R. J. (1970). Mechanisms Controlling World Water Chemistry. Science, 170(3962), 1088–1090. https://doi.org/10.1126/science.170.3962.1088
+Godsey, S. E., Kirchner, J. W., & Clow, D. W. (2009). Concentration–discharge relationships reflect chemostatic characteristics of US catchments. Hydrological Processes, 23(13), 1844–1864. https://doi.org/10.1002/hyp.7315
+Godsey, S. E., Hartmann, J., & Kirchner, J. W. (2019). Catchment chemostasis revisited: Water quality responds differently to variations in weather and climate. Hydrological Processes, 33(24), 3056–3069. https://doi.org/10.1002/hyp.13554
+Hall, F. R. (1970). Dissolved Solids-Discharge Relationships: 1. Mixing Models. Water Resources Research, 6(3), 845–850. https://doi.org/10.1029/WR006i003p00845
+Hall, F. R. (1971). Dissolved Solids-Discharge Relationships: 2. Applications to Field Data. Water Resources Research, 7(3), 591–601. https://doi.org/10.1029/WR007i003p00591
+Koenig, L. E., Shattuck, M. D., Snyder, L. E., Potter, J. D., & McDowell, W. H. (2017). Deconstructing the Effects of Flow on DOC, Nitrate, and Major Ion Interactions Using a High-Frequency Aquatic Sensor Network. Water Resources Research, 53(12), 10655–10673. https://doi.org/10.1002/2017WR020739
+Likens, G. E., Driscoll, C. T., Buso, D. C., Siccama, T. G., Johnson, C. E., Lovett, G. M., et al. (1994). The biogeochemistry of potassium at Hubbard Brook. Biogeochemistry, 25(2), 61–125. https://doi.org/10.1007/BF00000881
+Musolff, A., Schmidt, C., Selle, B., & Fleckenstein, J. H. (2015). Catchment controls on solute export. Advances in Water Resources, 86, 133–146. https://doi.org/10.1016/j.advwatres.2015.09.026
+O’Donnell, B., & Hotchkiss, E. R. (2019). Coupling Concentration- and Process-Discharge Relationships Integrates Water Chemistry and Metabolism in Streams. Water Resources Research, 55(12), 10179–10190. https://doi.org/10.1029/2019WR025025
+Shanley, J. B., McDowell, W. H., & Stallard, R. F. (2011). Long‐term patterns and short‐term dynamics of stream solutes and suspended sediment in a rapidly weathering tropical watershed. Water Resources Research, 47(7), 2010WR009788. https://doi.org/10.1029/2010WR009788
+Shattuck, M. D., Potter, J. D., Kobylinski, A., French, C., Miller, S., Keely, C., et al. (2016). Non-Point Nitrogen Sources and Transport in the Great Bay Watershed. Ecosystems, 321, 926–929.
+Snyder, L., Potter, J. D., & McDowell, W. H. (2018). An Evaluation of Nitrate, fDOM, and Turbidity Sensors in New Hampshire Streams. Water Resources Research, 54(3), 2466–2479. https://doi.org/10.1002/2017WR020678
+Speir, S. L., Rose, L. A., Blaszczak, J. R., Kincaid, D. W., Fazekas, H. M., Webster, A. J., et al. (n.d.). Catchment concentration–discharge relationships across temporal scales: A review. WIREs Water, n/a(n/a), e1702. https://doi.org/10.1002/wat2.1702
+Stewart, B., Shanley, J. B., Kirchner, J. W., Norris, D., Adler, T., Bristol, C., et al. (2022). Streams as Mirrors: Reading Subsurface Water Chemistry From Stream Chemistry. Water Resources Research, 58(1), e2021WR029931. https://doi.org/10.1029/2021WR029931
+Uhlenbrook, S., & Hoeg, S. (2003). Quantifying uncertainties in tracer-based hydrograph separations: a case study for two-, three- and five-component hydrograph separations in a mountainous catchment. Hydrological Processes, 17(2), 431–453. https://doi.org/10.1002/hyp.1134
+Van Meter, K. J., Basu, N. B., & Van Cappellen, P. (2017). Two centuries of nitrogen dynamics: Legacy sources and sinks in the Mississippi and Susquehanna River Basins. Global Biogeochemical Cycles, 31(1), 2–23. https://doi.org/10.1002/2016GB005498
+White, T., Brantley, S., Banwart, S., Chorover, J., Dietrich, W., Derry, L., et al. (2015). Chapter 2 - The Role of Critical Zone Observatories in Critical Zone Science. In J. R. Giardino & C. Houser (Eds.), Developments in Earth Surface Processes (Vol. 19, pp. 15–78). Elsevier. https://doi.org/10.1016/B978-0-444-63369-9.00002-1
+Wollheim, W. M., Mulukutla, G. K., Cook, C., & Carey, R. O. (2017). Aquatic Nitrate Retention at River Network Scales Across Flow Conditions Determined Using Nested In Situ Sensors. Water Resources Research, 53(11), 9740–9756. https://doi.org/10.1002/2017WR020644
+Wymore, A. S., Brereton, R. L., Ibarra, D. E., Maher, K., & McDowell, W. H. (2017). Critical zone structure controls concentration-discharge relationships and solute generation in forested tropical montane watersheds. Water Resources Research, 53(7), 6279–6295. https://doi.org/10.1002/2016WR020016
+Wymore, A. S., Shattuck, M. D., Potter, J. D., Snyder, L., & McDowell, W. H. (2021). The Lamprey River hydrological observatory: Suburbanization and changing seasonality. Hydrological Processes, 35(4), e14131.
+Wymore, A. S., Ward, A. S., Wohl, E., & Harvey, J. W. (2023). Viewing river corridors through the lens of critical zone science. Frontiers in Water, 5. Retrieved from https://www.frontiersin.org/articles/10.3389/frwa.2023.1147561
+Zimmer, M. A., Pellerin, B., Burns, D. A., & Petrochenkov, G. (2019). Temporal Variability in Nitrate-Discharge Relationships in Large Rivers as Revealed by High-Frequency Data. Water Resources Research, 55(2), 973–989. https://doi.org/10.1029/2018WR023478
+
+
+
+# Appendix A
+
+## Seasonal CQ Relationships for all solutes and sites between 2000 - 2021 (except LMP78).
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, include=FALSE}
+
+# These print too small in the knitted pdf. I wanted to make only appendix A landscape oriented, but doing so apparently requires leveraging LaTeX--which I did not have time to explore. Hacked a solution by combining the knitted pdf with separate pdfs already in landscape so you can actually read them if you want.
+
+# K
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=KmgKL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(K [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Potassium CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                               values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                               labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# Mg
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=MgmgMgL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(Mg [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Magnesium CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+
+
+# Ca
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=CamgCaL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(Ca [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Calcium CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+
+
+# Na
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=NamgNaL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(Na [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Sodium CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+
+
+# Cl
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=ClmgClL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(Cl [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Chloride CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+
+
+# SiO2
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=SiO2mgSiO2L_New, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(SiO2 [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Silica CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+
+
+# SO4
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=SO4mgSL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(S [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Sulfate-S CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                              values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                              labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# NPOC
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=NPOCmgCL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(C [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("NPOC CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# TDN
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=TDNmgNL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(N [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("TDN CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# NH4
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=NH4ugNL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(N [ug/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Ammonium-N CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# NO3
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=NO3_Final, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(N [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Nirtrate-N CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# PO4
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=comb_PO4ugPL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(P [ug/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Phosphate-P CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# Abs254
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=Abs254, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(Abs 254 nm)"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Abs 254 nm CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# SUVA
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=SUVA, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(SUVA)"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("SUVA CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# pH
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=pH, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(pH)"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("pH CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# Spec Cond
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=Spec_Cond, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(Spec. Cond. [uS/cm])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Specific Conductance CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# DOmg/l
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=DOmgL, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(DO [mg/L])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Dissolved Oxygen CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+# Turbidity
+
+
+ggplot(lrho_q_wrk_surface, aes(x=q_corr_usgs_nm_m3s, y=Turbidity, col=cut(YearDay, breaks=c(001, 090, 181, 273, 365)))) + 
+  geom_point(size = 2, pch = 16) + 
+  facet_wrap(~Station_ID, scales = "free")+
+  labs(x="log(Q (m^3/s))", y = expression("log(Turbidity [ntu])"))+
+  theme_cowplot()+scale_x_continuous(trans='log10')+
+  geom_smooth(method = "lm")+
+  scale_y_continuous(trans='log10')+
+  theme(aspect.ratio = 1)+
+  ggtitle("Turbidity CQ of LRHO Sites By Season")+scale_color_manual(name="Season",
+                                                                           values=c("#0072B2", "#009E73", "#CC79A7", "#E69F00"),
+                                                                           labels = c("Winter", "Spring", "Summer", "Fall"))
+
+```
